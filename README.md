@@ -31,8 +31,8 @@ All models were evaluated under consistent training setups to enable fair benchm
 
 This repository is part of the official codebase accompanying the Master’s thesis submitted to **Technische Universität Berlin**.
 
-📘 *[Thesis Title – to be added]*  
-📎 *[Insert link to PDF or university archive if available]*
+📘 *Learning Multivariate Functions with Simple
+Structures*  
 
 ---
 
