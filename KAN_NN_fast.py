@@ -59,6 +59,10 @@ class KAN_layer(nn.Module):
         self.out_dim = out_dim
         self.hidden = [1] + hidden
         self.init_layers()
+        self.register_buffer(
+            "repeat_idx",
+            torch.arange(in_dim).repeat(out_dim)
+        )
     
     def init_layers(self):
         self.layers = nn.Sequential()
@@ -71,16 +75,27 @@ class KAN_layer(nn.Module):
     def forward(self, x):
         if len(x.shape) < 3:
             x = x.unsqueeze(-1) ## Assume 1 Neuron
+
+        ####Memory efficient
+        #x_new = x.unsqueeze(1).expand(-1, self.out_dim, -1, -1).reshape(x.size(0), -1, 1)
+        #idx = self.repeat_idx.unsqueeze(0).expand(x.size(0), -1)  # (B, in_dim * out_dim)
+        #x_new = torch.gather(x.squeeze(-1), 1, idx).unsqueeze(-1)  # (B, in_dim * out_dim, 1)
+        ## Speed
+        #idx = torch.arange(x.shape[1], device=x.device).repeat(self.out_dim).unsqueeze(0).expand(x.size(0), -1)
+        #x_new = torch.gather(x.squeeze(-1), 1, idx).unsqueeze(-1)
+        #-------------------------------------#
         ## Memory efficient
-        x_new = x.unsqueeze(1).expand(-1, self.out_dim, -1, -1).reshape(x.size(0), -1, 1)
+        #x_new = x.unsqueeze(1).expand(-1, self.out_dim, -1, -1).reshape(x.size(0), -1, 1)
         # Speed
         #idx = torch.arange(x.shape[1], device=x.device).repeat(self.out_dim).unsqueeze(0).expand(x.size(0), -1)
         #x_new = torch.gather(x.squeeze(-1), 1, idx).unsqueeze(-1)
 
-        #x_new_rep = x.repeat(1,self.out_dim,1)
-        #print(x_new.shape, x_new_rep.shape)
-        #print(torch.allclose(x_new, x_new_rep))
-        #print(x_new, x_new_rep)
+        idx = self.repeat_idx.unsqueeze(0).expand(x.size(0), -1)  # (B, in_dim * out_dim)
+        x_new = torch.gather(x.squeeze(-1), 1, idx).unsqueeze(-1)  # (B, in_dim * out_dim, 1)
+        x_new_rep = x.repeat(1,self.out_dim,1)
+        print(x_new.shape, x_new_rep.shape)
+        print(torch.allclose(x_new, x_new_rep))
+        print(x_new, x_new_rep)
         if x.shape[0] == 1:
             return self.layers(x_new).squeeze().unsqueeze(0)
         output = self.layers(x_new).squeeze()
