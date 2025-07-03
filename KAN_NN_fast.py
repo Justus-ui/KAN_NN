@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import math 
+import opt_einsum as oe
 
 class Linear(nn.Module):
     def __init__(self, d, o, i):
@@ -21,7 +22,7 @@ class Linear(nn.Module):
         nn.init.uniform_(self.bias, -bound, bound)
     
     def forward(self,x):
-        return torch.einsum('doi, Bdi -> Bdo', self.weight, x) + self.bias.unsqueeze(0)
+        return oe.contract('doi, Bdi -> Bdo', self.weight, x, optimize='greedy') + self.bias.unsqueeze(0)
     
 class Output_Linear(nn.Module):
     def __init__(self, o,i,h):
@@ -46,7 +47,7 @@ class Output_Linear(nn.Module):
     def forward(self, x):
         Bacth_size = x.shape[0]
         x_view = x.view(Bacth_size, self.o, self.i * self.h)
-        return (torch.einsum('oi,boi->bo', self.weight, x_view) + self.bias).unsqueeze(-1)
+        return (oe.contract('oi,boi->bo', self.weight, x_view, optimize='greedy') + self.bias).unsqueeze(-1)
 
 
 class KAN_layer(nn.Module):
@@ -68,13 +69,14 @@ class KAN_layer(nn.Module):
 
 
     def forward(self, x):
+        if len(x.shape) < 3:
+            x = x.unsqueeze(-1) ## Assume 1 Neuron
         x_new = x.repeat(1,self.out_dim,1)
-        #x_expanded = x.expand(x.shape[0], self.in_dim, self.out_dim)
-        # Reshape to [B, in_dim * out_dim, n]
-        #x_expanded = x_expanded.reshape(x.shape[0], self.in_dim * self.out_dim, 1)
-        return self.layers(x_new)
+        if x.shape[0] == 1:
+            return self.layers(x_new).squeeze().unsqueeze(0)
+        output = self.layers(x_new).squeeze()
+        return output
 
-    
 class Neural_Kan(nn.Module):
     """
     Class:

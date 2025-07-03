@@ -1,6 +1,6 @@
 import torch.optim as optim
 import matplotlib.pyplot as plt
-import torch
+import scorch as torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
@@ -8,15 +8,16 @@ from torch.sparse import to_sparse_semi_structured
 import time
 
 class Linear(nn.Module):
-    def __init__(self, in_dim, out_dim, mask):
+    def __init__(self, in_features, out_features, mask):
         super(Linear, self).__init__()
-        self.Lin_layer = nn.Linear(in_dim, out_dim)
-        self.mask = mask
+        self.in_features = in_features
+        self.out_features = out_features
+        self.Lin_layer = nn.Linear(in_features, out_features)
+        self.weight = nn.Parameter((self.Lin_layer.weight.data * self.mask))
+        self.bias = nn.Parameter(self.Lin_layer.bias.data)
 
-    def forward(self, x):
-        masked_weights = (self.Lin_layer.weight * self.mask)#.to_sparse()
-        return F.linear(x, masked_weights, self.Lin_layer.bias)
-
+    def forward(self, input):
+        return torch.matmul(input, self.weight.t()) + self.bias
 
 class SparseNeuralNetwork(nn.Module):
     def __init__(self, in_dim, out_dim, h = [8,4]):
