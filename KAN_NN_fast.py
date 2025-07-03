@@ -71,10 +71,20 @@ class KAN_layer(nn.Module):
     def forward(self, x):
         if len(x.shape) < 3:
             x = x.unsqueeze(-1) ## Assume 1 Neuron
-        x_new = x.repeat(1,self.out_dim,1)
+        ## Memory efficient
+        x_new = x.unsqueeze(1).expand(-1, self.out_dim, -1, -1).reshape(x.size(0), -1, 1)
+        # Speed
+        #idx = torch.arange(x.shape[1], device=x.device).repeat(self.out_dim).unsqueeze(0).expand(x.size(0), -1)
+        #x_new = torch.gather(x.squeeze(-1), 1, idx).unsqueeze(-1)
+
+        #x_new_rep = x.repeat(1,self.out_dim,1)
+        #print(x_new.shape, x_new_rep.shape)
+        #print(torch.allclose(x_new, x_new_rep))
+        #print(x_new, x_new_rep)
         if x.shape[0] == 1:
             return self.layers(x_new).squeeze().unsqueeze(0)
         output = self.layers(x_new).squeeze()
+        
         return output
 
 class Neural_Kan(nn.Module):
@@ -98,5 +108,5 @@ class Neural_Kan(nn.Module):
 if __name__ == '__main__':
     model = Neural_Kan(shape = [5,4,3], h = [32])
     x = torch.randn(16, 5, 1) #### [Bacth_size, In_dim, neurons] neurons usually 1!
-    print(model(torch.randn(16,5,1)).shape)
+    print(model(torch.randn(2,5,1)).shape)
 
