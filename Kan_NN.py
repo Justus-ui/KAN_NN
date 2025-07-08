@@ -1,6 +1,6 @@
 import torch.optim as optim
 import matplotlib.pyplot as plt
-import scorch as torch
+import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
@@ -8,16 +8,15 @@ from torch.sparse import to_sparse_semi_structured
 import time
 
 class Linear(nn.Module):
-    def __init__(self, in_features, out_features, mask):
+    def __init__(self, in_dim, out_dim, mask):
         super(Linear, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.Lin_layer = nn.Linear(in_features, out_features)
-        self.weight = nn.Parameter((self.Lin_layer.weight.data * self.mask))
-        self.bias = nn.Parameter(self.Lin_layer.bias.data)
+        self.Lin_layer = nn.Linear(in_dim, out_dim)
+        self.mask = mask
 
-    def forward(self, input):
-        return torch.matmul(input, self.weight.t()) + self.bias
+    def forward(self, x):
+        masked_weights = (self.Lin_layer.weight * self.mask)
+        return F.linear(x, masked_weights, self.Lin_layer.bias)
+
 
 class SparseNeuralNetwork(nn.Module):
     def __init__(self, in_dim, out_dim, h = [8,4]):
@@ -26,7 +25,6 @@ class SparseNeuralNetwork(nn.Module):
         self.univariate_nn = nn.Sequential()
         layers = []
         self.masks = []
-        self.num_funcs = 3
         for layer in range(len(h)):
             if layer == 0:
                 ### INput layer need special mask computation
@@ -47,7 +45,6 @@ class SparseNeuralNetwork(nn.Module):
             layers.append(nn.ReLU())
 
         self.univariate_nn = nn.Sequential(*layers)
-        #self.multiply_weight_masks()
         mask = self.out_layer_mask(in_dim* out_dim * h[-1], out_dim, [h[-1],1], input_dimension = in_dim)
         self.masks.append(mask)
         self.fc2 = Linear(in_dim* out_dim * h[-1], out_dim, mask)
@@ -93,15 +90,13 @@ class Neural_Kan(nn.Module):
             self.layers.append(model)
             self.params += sum(mask.count_nonzero().item() for mask in model.masks)
         #print(self)
-
-
     def forward(self,x):
         return self.layers(x)
 
 if __name__ == "__main__":
     import time
     #model = torch.jit.script(Neural_Kan(shape = [12,12,3], h = [8]))
-    model = Neural_Kan(shape = [2,13,1,1], h = [32])
+    model = Neural_Kan(shape = [2,2,1,1], h = [2])
     criterion = torch.nn.MSELoss()
     start_time = time.time()
     output = model(torch.randn(100,2))
