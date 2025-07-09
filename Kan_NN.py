@@ -1,5 +1,5 @@
 """
-    This model employs sparse matrices directly, recall this when employing regularization such as ||W||
+    This model employs sparse matrices directly
 """
 import torch.optim as optim
 import matplotlib.pyplot as plt
