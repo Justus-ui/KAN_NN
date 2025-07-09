@@ -98,6 +98,7 @@ class KAN_layer(nn.Module):
             self.layers.append(Linear(self.out_dim * self.in_dim, self.hidden[i], self.hidden[i - 1]))
             self.layers.append(nn.ReLU())
         self.layers.append(Output_Linear(self.out_dim, self.in_dim, self.hidden[-1]))
+        #self.layers.append(nn.BatchNorm1d(self.hidden[-1], affine=True))
 
 
     def forward(self, x):

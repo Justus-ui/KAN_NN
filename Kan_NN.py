@@ -1,3 +1,6 @@
+"""
+    This model employs sparse matrices directly, recall this when employing regularization such as ||W||
+"""
 import torch.optim as optim
 import matplotlib.pyplot as plt
 import torch
@@ -12,6 +15,8 @@ class Linear(nn.Module):
         super(Linear, self).__init__()
         self.Lin_layer = nn.Linear(in_dim, out_dim)
         self.mask = mask
+        #self.Lin_layer.weight.data *= mask
+
 
     def forward(self, x):
         masked_weights = (self.Lin_layer.weight * self.mask)
@@ -96,7 +101,7 @@ class Neural_Kan(nn.Module):
 if __name__ == "__main__":
     import time
     #model = torch.jit.script(Neural_Kan(shape = [12,12,3], h = [8]))
-    model = Neural_Kan(shape = [2,2,1,1], h = [2])
+    model = Neural_Kan(shape = [2,2], h = [2])
     criterion = torch.nn.MSELoss()
     start_time = time.time()
     output = model(torch.randn(100,2))
